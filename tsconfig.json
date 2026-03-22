@@ -9,7 +9,7 @@
     "**/*.ts",
     "**/*.tsx",
     "nativewind-env.d.ts"
-  ],
+, "App.jsx"  ],
   "exclude": [
     "**/node_modules",
     "**/Pods"
