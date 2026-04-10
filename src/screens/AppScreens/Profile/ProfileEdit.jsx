@@ -10,17 +10,19 @@ import {
   Keyboard,
   Pressable,
   ActivityIndicator,
+  Alert,
+  PermissionsAndroid,
 } from 'react-native';
 import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../comonents/Header';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-import { PERMISSIONS, request, check, RESULTS } from 'react-native-permissions';
+import { PERMISSIONS, request, check, RESULTS, openSettings } from 'react-native-permissions';
 import DialogBox from '../../../comonents/DilaogBox';
 import { useNavigation } from '@react-navigation/native';
 import NetInfo from '@react-native-community/netinfo';
-import NoInternet from '../NoInternet'; // custom component defined below
+import NoInternet from '../NoInternet';
 
 const ProfileEdit = () => {
   const navigation = useNavigation();
@@ -42,6 +44,7 @@ const ProfileEdit = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showImageOptions, setShowImageOptions] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Track changes
   const [hasChanges, setHasChanges] = useState(false);
@@ -115,48 +118,72 @@ const ProfileEdit = () => {
     }
   };
 
-  // ------------------- Image Picker & Camera -------------------
+  // ------------------- Camera Permission for Android -------------------
+  const requestCameraPermissionAndroid = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: "Camera Permission",
+          message: "This app needs access to your camera to take photos.",
+          buttonNeutral: "Ask Me Later",
+          buttonNegative: "Cancel",
+          buttonPositive: "OK",
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.warn(err);
+      return false;
+    }
+  };
+
+  // ------------------- Camera Permission for iOS -------------------
   const checkCameraPermission = async () => {
     if (Platform.OS === 'ios') {
-      return await check(PERMISSIONS.IOS.CAMERA);
+      const status = await check(PERMISSIONS.IOS.CAMERA);
+      return status;
     } else {
-      return await check(PERMISSIONS.ANDROID.CAMERA);
+      const status = await check(PERMISSIONS.ANDROID.CAMERA);
+      return status;
     }
   };
 
   const requestCameraPermission = async () => {
     if (Platform.OS === 'ios') {
-      return await request(PERMISSIONS.IOS.CAMERA);
+      const status = await request(PERMISSIONS.IOS.CAMERA);
+      return status;
     } else {
-      return await request(PERMISSIONS.ANDROID.CAMERA);
+      const status = await request(PERMISSIONS.ANDROID.CAMERA);
+      return status;
     }
   };
 
-  const handleChooseImage = () => {
-    const options = {
-      mediaType: 'photo',
-      includeBase64: false,
-      maxHeight: 1000,
-      maxWidth: 1000,
-      quality: 0.8,
-      selectionLimit: 1,
-    };
-    launchImageLibrary(options, response => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.error) {
-        console.log('ImagePicker Error: ', response.error);
-        showDialog('error', 'Error', 'Error selecting image: ' + response.error);
-      } else if (response.assets && response.assets[0]) {
-        setImage({ uri: response.assets[0].uri });
-        setShowImageOptions(false);
-      }
-    });
-  };
-
+  // ------------------- Open Camera with Permission Flow -------------------
   const handleTakePhoto = async () => {
     try {
+      setIsLoading(true);
+      
+      // For Android, use the built-in permission request
+      if (Platform.OS === 'android') {
+        const hasPermission = await requestCameraPermissionAndroid();
+        if (hasPermission) {
+          openCamera();
+        } else {
+          showDialog(
+            'warning',
+            'Permission Denied',
+            'Camera permission is required to take photos. Please grant permission in settings.',
+            'md'
+          );
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // For iOS, use react-native-permissions
       const permissionStatus = await checkCameraPermission();
+      
       if (permissionStatus === RESULTS.GRANTED) {
         openCamera();
       } else if (permissionStatus === RESULTS.DENIED) {
@@ -164,14 +191,27 @@ const ProfileEdit = () => {
         if (requestStatus === RESULTS.GRANTED) {
           openCamera();
         } else {
-          showDialog('error', 'Permission Denied', 'Camera permission is required to take photos');
+          showDialog(
+            'warning',
+            'Permission Denied',
+            'Camera permission is required to take photos.',
+            'md'
+          );
         }
       } else if (permissionStatus === RESULTS.BLOCKED) {
-        showDialog('error', 'Permission Blocked', 'Camera permission is blocked. Please enable it in settings');
+        showDialog(
+          'error',
+          'Permission Blocked',
+          'Camera permission is blocked. Please enable it in settings.',
+          'md'
+        );
       }
+      
+      setIsLoading(false);
     } catch (error) {
       console.log('Permission error:', error);
       showDialog('error', 'Error', 'Error accessing camera');
+      setIsLoading(false);
     }
   };
 
@@ -183,16 +223,45 @@ const ProfileEdit = () => {
       maxWidth: 1000,
       quality: 0.8,
       saveToPhotos: true,
+      cameraType: 'back',
     };
+    
     launchCamera(options, response => {
       if (response.didCancel) {
         console.log('User cancelled camera');
+        showDialog('info', 'Cancelled', 'Photo capture was cancelled');
       } else if (response.error) {
         console.log('Camera Error: ', response.error);
         showDialog('error', 'Error', 'Error taking photo: ' + response.error);
       } else if (response.assets && response.assets[0]) {
         setImage({ uri: response.assets[0].uri });
         setShowImageOptions(false);
+        showDialog('success', 'Success', 'Photo updated successfully', 'sm');
+      }
+    });
+  };
+
+  // ------------------- Gallery Picker -------------------
+  const handleChooseImage = () => {
+    const options = {
+      mediaType: 'photo',
+      includeBase64: false,
+      maxHeight: 1000,
+      maxWidth: 1000,
+      quality: 0.8,
+      selectionLimit: 1,
+    };
+    
+    launchImageLibrary(options, response => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.error) {
+        console.log('ImagePicker Error: ', response.error);
+        showDialog('error', 'Error', 'Error selecting image: ' + response.error);
+      } else if (response.assets && response.assets[0]) {
+        setImage({ uri: response.assets[0].uri });
+        setShowImageOptions(false);
+        showDialog('success', 'Success', 'Image selected successfully', 'sm');
       }
     });
   };
@@ -240,6 +309,8 @@ const ProfileEdit = () => {
         return <Icon name="error" size={40} color="#E86F6F" />;
       case 'warning':
         return <Icon name="warning" size={40} color="#F0B27A" />;
+      case 'info':
+        return <Icon name="info" size={40} color="#88D8C0" />;
       default:
         return <Icon name="info" size={40} color="#88D8C0" />;
     }
@@ -294,9 +365,14 @@ const ProfileEdit = () => {
         <TouchableOpacity
           className="flex-row items-center py-3 border-b border-gray-100"
           onPress={handleTakePhoto}
+          disabled={isLoading}
         >
           <View className="w-10 h-10 bg-primary-sage50 rounded-full items-center justify-center mr-3">
-            <Icon name="camera-alt" size={20} color="#88D8C0" />
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#88D8C0" />
+            ) : (
+              <Icon name="camera-alt" size={20} color="#88D8C0" />
+            )}
           </View>
           <Text className="text-gray-700 text-base flex-1">Take Photo</Text>
           <Icon name="chevron-right" size={20} color="#BBBBBB" />

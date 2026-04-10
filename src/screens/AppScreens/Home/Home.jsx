@@ -1,11 +1,21 @@
-import { Image, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import { Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList } from 'react-native'
+import React, { useState } from 'react'
 import LinearGradient from 'react-native-linear-gradient';
 import { Colors } from '../../../constants/Color';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GrowIcon } from '../../../assets/svgIcons/SVGIcons';
+import { DownIcon, FileIcon, GrowIcon, WalletIcon } from '../../../assets/svgIcons/SVGIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const Home = () => {
+  const [activeTab, setActiveTab] = useState('Expense');
+  const [expenses, setExpenses] = useState([]);
+  const [earnings, setEarnings] = useState([]);
+
+  // Form states
+  const [whatFor, setWhatFor] = useState('');
+  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const user = {
     name: 'John Doe',
@@ -15,108 +25,288 @@ const Home = () => {
     walletBalance: '₹2,500',
   };
 
-
   const insets = useSafeAreaInsets()
-  return (
-    <LinearGradient
-      colors={[`${Colors.brand.highlight}`, '#fff', '#fff']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      className="flex-1"
-    >
-      <StatusBar
-        backgroundColor="transparent"
-        barStyle="dark-content"
-        translucent={true}
-      />
 
-      {/* Header with Profile and Icons */}
-      <View
-        className="w-full bg-transparent flex-row items-center justify-between px-4"
-        style={{ paddingTop: insets.top + 4, paddingBottom: 4 }}
+  const handleAdd = () => {
+    if (!whatFor.trim() || !amount.trim()) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    const newItem = {
+      id: Date.now().toString(),
+      whatFor: whatFor,
+      amount: parseFloat(amount),
+      date: date.toLocaleDateString(),
+      fullDate: date
+    };
+
+    if (activeTab === 'Expense') {
+      setExpenses([newItem, ...expenses]);
+    } else {
+      setEarnings([newItem, ...earnings]);
+    }
+
+    // Reset form
+    setWhatFor('');
+    setAmount('');
+    setDate(new Date());
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    setShowDatePicker(false);
+    setDate(currentDate);
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const renderItem = ({ item }) => (
+    <View className="bg-white rounded-xl p-4 mb-3 flex-row justify-between items-center" style={{ elevation: 2 }}>
+      <View className="flex-1">
+        <Text className="font-semibold text-gray-800 text-base">{item.whatFor}</Text>
+        <Text className="text-gray-500 text-xs mt-1">{item.date}</Text>
+      </View>
+      <Text className={`font-bold text-lg ${activeTab === 'Expense' ? 'text-red-600' : 'text-green-600'}`}>
+        {activeTab === 'Expense' ? '-' : '+'}₹{item.amount}
+      </Text>
+    </View>
+  );
+
+  return (
+    <View className="bg-gray-50 flex-1">
+      <LinearGradient
+        colors={[`${Colors.brand.highlight}`, '#fff', '#fff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        className="flex-1"
       >
-        {/* Left side - Profile */}
-        <View className="flex-row items-center flex-1">
-          <View className="relative">
-            <Image
-              source={{ uri: user.profileImage }}
-              className="w-12 h-12 rounded-full border-2 border-white"
-            />
-            <View
-              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${user.isActive ? 'bg-green-500' : 'bg-gray-400'
-                }`}
-            />
-          </View>
-          <View className="ml-3">
-            <Text className="text-gray-700 text-sm">Welcome Back</Text>
-            <View className="flex-row items-center">
-              <Text className="text-gray-900 font-bold text-lg">
-                {user.name}
-              </Text>
+        <StatusBar
+          backgroundColor="transparent"
+          barStyle="dark-content"
+          translucent={true}
+        />
+
+
+
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        >
+          {/* Header with Profile and Icons */}
+          <View
+            className="w-full bg-transparent flex-row items-center justify-between px-4"
+            style={{ paddingTop: insets.top + 4, paddingBottom: 4 }}
+          >
+            {/* Left side - Profile */}
+            <View className="flex-row items-center flex-1">
+              <View className="relative">
+                <Image
+                  source={{ uri: user.profileImage }}
+                  className="w-12 h-12 rounded-full border-2 border-white"
+                />
+                <View
+                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${user.isActive ? 'bg-green-500' : 'bg-gray-400'
+                    }`}
+                />
+              </View>
+              <View className="ml-3">
+                <Text className="text-gray-700 text-sm">Welcome Back</Text>
+                <View className="flex-row items-center">
+                  <Text className="text-gray-900 font-bold text-lg">
+                    {user.name}
+                  </Text>
+                </View>
+                <Text
+                  className={`text-xs font-medium ${user.isActive ? 'text-green-600' : 'text-gray-500'
+                    }`}
+                >
+                  {user.isActive ? '● Active' : '● Inactive'}
+                </Text>
+              </View>
             </View>
-            <Text
-              className={`text-xs font-medium ${user.isActive ? 'text-green-600' : 'text-gray-500'
-                }`}
-            >
-              {user.isActive ? '● Active' : '● Inactive'}
+          </View>
+          <View className='px-5'>
+            <Text className='font-bold text-3xl mt-3 text-black'>Money Tracker</Text>
+            <Text className='font-normal text-lg text-gray-500'>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </Text>
           </View>
-        </View>
+
+          <View className='px-5'>
+            <Text className='font-bold text-lg text-gray-600 mb-3'>Today</Text>
+
+            {/* Three-column grid using flexbox */}
+            <View className='flex-row flex-wrap justify-between gap-1'>
+              {/* Card 1 - Total Expenses */}
+              <View className='bg-white px-5 py-5 rounded-2xl w-[31%] border border-gray-300' >
+                <View className='flex items-center justify-between mb-3'>
+                  <View className='w-10 h-10 bg-red-100 justify-center items-center rounded-xl'>
+                    <DownIcon width={20} height={20} stroke={'#EB6738'} />
+                  </View>
+                  <Text className='font-semibold mt-3 text-xs text-gray-800'>Expenses</Text>
+
+                </View>
+                <Text className='text-lg text-center font-bold text-gray-900'>
+                  ₹{expenses.reduce((sum, item) => sum + item.amount, 0)}
+                </Text>
+              </View>
+
+              {/* Card 2 - Total Earnings */}
+              <View className='bg-white px-5 py-5 rounded-2xl w-[31%] border border-gray-300' >
+                <View className='flex items-center justify-between mb-3'>
+                  <View className='w-10 h-10 bg-green-100 justify-center items-center rounded-xl'>
+                    <GrowIcon width={20} height={20} stroke={'#4CAF50'} />
+                  </View>
+                  <Text className='font-semibold mt-3 text-xs text-gray-800'>Earning</Text>
+
+                </View>
+                <Text className='text-lg text-center font-bold text-gray-900'>
+                  ₹{expenses.reduce((sum, item) => sum + item.amount, 0)}
+                </Text>
+              </View>
 
 
-      </View>
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
-        <View className='px-5'>
-          <Text className='font-bold text-3xl mt-3 text-black'>Money Tracker</Text>
-          <Text className='font-normal text-lg text-gary-500'>Sunday, 22 March</Text>
-        </View>
+              {/* Card 3 - Balance */}
+              <View className='bg-white px-5 py-5 rounded-2xl w-[31%] border border-gray-300' >
+                <View className='flex items-center justify-between mb-3'>
+                  <View className='w-10 h-10 bg-violet-100 justify-center items-center rounded-xl'>
+                    <WalletIcon width={20} height={20} stroke={'#9E35F0'} />
+                  </View>
+                  <Text className='font-semibold mt-3 text-xs text-gray-800'>Balance</Text>
 
-    <View className='px-5'>
-  <Text className='font-bold text-lg text-gray-600 mb-3'>Today</Text>
+                </View>
+                <Text className='text-lg text-center font-bold text-gray-900'>
+                  ₹{expenses.reduce((sum, item) => sum + item.amount, 0)}
+                </Text>
+              </View>
 
-  {/* Three-column grid using flexbox */}
-  <View className='flex-row flex-wrap justify-between gap-1'>
-    {/* Card 1 */}
-    <View className='bg-white px-5 py-5 rounded-2xl w-[31%]' style={{ elevation: 2 }}>
-      <View className='flex-row items-center justify-between mb-3'>
-        <Text className='font-semibold text-xs text-gray-800'>Earned</Text>
-        <View className='w-10 h-10 bg-green-100 justify-center items-center rounded-xl'>
-          <GrowIcon width={20} height={20} stroke={Colors.primary.green} />
-        </View>
-      </View>
-      <Text className='text-lg font-bold text-gray-900'>+100</Text>
+            </View>
+          </View>
+
+          {/* Tabs */}
+          <View className="flex-row px-2 mt-2 mb-5 mt-5 bg-gray-300 rounded-2xl py-2 mx-5">
+            <TouchableOpacity
+              className={`py-2 px-4 mr-3 flex-1 justify-center items-center rounded-xl ${activeTab === 'Expense' ? 'bg-white' : ''}`}
+              onPress={() => setActiveTab('Expense')}
+            >
+              <Text className={`text-sm font-medium ${activeTab === 'Expense' ? 'text-black' : 'text-stone-600'}`}>
+                Expense
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className={`py-2 px-4 mr-3 flex-1 justify-center items-center rounded-xl ${activeTab === 'Earnings' ? 'bg-white' : ''}`}
+              onPress={() => setActiveTab('Earnings')}
+            >
+              <Text className={`text-sm font-medium ${activeTab === 'Earnings' ? 'text-black' : 'text-stone-600'}`}>
+                Earnings
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Input Form */}
+          <View className="mx-5 bg-white rounded-2xl p-4 mb-5 border border-gray-300" >
+            <Text className="font-bold text-lg text-gray-800 mb-3">
+              Add {activeTab === 'Expense' ? 'Expense' : 'Earning'}
+            </Text>
+
+            {/* What For Input */}
+            <View className="mb-4">
+              <Text className="text-gray-700 text-sm mb-2 font-medium">What for?</Text>
+              <TextInput
+                className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800"
+                placeholder="e.g., Grocery, Shopping, Salary"
+                value={whatFor}
+                onChangeText={setWhatFor}
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            {/* Amount Input */}
+            <View className="mb-4">
+              <Text className="text-gray-700 text-sm mb-2 font-medium">Amount (₹)</Text>
+              <TextInput
+                className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800"
+                placeholder="Enter amount"
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="numeric"
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            {/* Calendar Input */}
+            <View className="mb-4">
+              <Text className="text-gray-700 text-sm mb-2 font-medium">Date</Text>
+              <TouchableOpacity
+                className="border border-gray-300 rounded-xl px-4 py-3"
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text className="text-gray-800">{formatDate(date)}</Text>
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display="default"
+                  onChange={onDateChange}
+                />
+              )}
+            </View>
+
+            {/* Add Button */}
+            <TouchableOpacity
+              className={`rounded-xl py-3 ${activeTab === 'Expense' ? 'bg-red-600' : 'bg-green-600'}`}
+              onPress={handleAdd}
+            >
+              <Text className="text-white text-center font-bold text-base">
+                Add {activeTab === 'Expense' ? 'Expense' : 'Earning'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* List Display */}
+          <View className="mx-5 mb-5">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="font-bold text-lg text-gray-800">
+                Recent {activeTab === 'Expense' ? 'Expenses' : 'Earnings'}
+              </Text>
+              <Text className="text-gray-500 text-sm">
+                Total: ₹{(activeTab === 'Expense' ? expenses : earnings).reduce((sum, item) => sum + item.amount, 0)}
+              </Text>
+            </View>
+
+            {(activeTab === 'Expense' ? expenses : earnings).length === 0 ? (
+              <View className="bg-white rounded-xl p-8 items-center border border-gray-300" >
+                <Text className="text-gray-500 text-center">
+                  No {activeTab === 'Expense' ? 'expenses' : 'earnings'} added yet.
+                </Text>
+                <Text className="text-gray-400 text-sm text-center mt-2">
+                  Use the form above to add your first {activeTab === 'Expense' ? 'expense' : 'earning'}.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={activeTab === 'Expense' ? expenses : earnings}
+                renderItem={renderItem}
+                keyExtractor={item => item.id}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+
+        </ScrollView>
+      </LinearGradient>
     </View>
-
-    {/* Card 2 */}
-    <View className='bg-white px-5 py-5 rounded-2xl w-[31%]' style={{ elevation: 2 }}>
-      <View className='flex-row items-center justify-between mb-3'>
-        <Text className='font-semibold text-sm text-gray-800'>Earned</Text>
-        <View className='w-10 h-10 bg-green-100 justify-center items-center rounded-xl'>
-          <GrowIcon width={20} height={20} stroke={Colors.primary.green} />
-        </View>
-      </View>
-      <Text className='text-lg font-bold text-gray-900'>+100</Text>
-    </View>
-
-    {/* Card 3 */}
-    <View className='bg-white px-5 py-5 rounded-2xl w-[31%]' style={{ elevation: 2 }}>
-      <View className='flex-row items-center justify-between mb-3'>
-        <Text className='font-semibold text-sm text-gray-800'>Earned</Text>
-        <View className='w-10 h-10 bg-green-100 justify-center items-center rounded-xl'>
-          <GrowIcon width={20} height={20} stroke={Colors.primary.green} />
-        </View>
-      </View>
-      <Text className='text-lg font-bold text-gray-900'>+100</Text>
-    </View>
-  </View>
-</View>
-
-      </ScrollView>
-    </LinearGradient>
   )
 }
 

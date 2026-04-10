@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DialogBox from '../../comonents/DilaogBox'
 import { loginApi } from '../../lib/api'; // adjust path as needed
+import { toast, Toaster } from 'sonner-native';
+import StatusMessage from '../../comonents/StatusMessage';
 
 const Login = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -77,7 +79,8 @@ const Login = ({ navigation }) => {
     const fillDemoAccount = () => {
         setEmail(demoAccount.username);
         setPassword(demoAccount.password);
-        showDialog('info', 'Demo Account Filled', 'Demo credentials have been filled. Click Sign In to continue.');
+        toast.custom(<StatusMessage type='info' title={'Information'} message='Demo account credentials filled!' />);
+      
     };
 
     // Dialog footers (unchanged)
@@ -139,6 +142,9 @@ const Login = ({ navigation }) => {
 
     return (
         <View className='flex-1 bg-teal-100 justify-center items-center px-10'>
+            <View className="absolute inset-0 z-50 w-90% pointer-events-none">
+                <Toaster />
+            </View>
             <View className='bg-white w-[100%] p-8 h-auto rounded-3xl shadow-lg border border-gray-100'>
                 <Text className='font-bold text-3xl text-black mb-2'>Welcome Back</Text>
                 <Text className='text-gray-500 text-base mb-8'>Sign in to your account</Text>
