@@ -1,5 +1,5 @@
-import { StyleSheet, Text, Alert, Pressable, View } from 'react-native';
-import React from 'react';
+import { StyleSheet, Text, Alert, Pressable, View, Keyboard } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Home from '../screens/AppScreens/Home/Home';
 import Profile from '../screens/AppScreens/Profile/Profile';
@@ -17,8 +17,7 @@ const Tab = createBottomTabNavigator();
 const CustomTabBarButton = ({ children, onPress, isOnline, style, ...props }) => {
   const handlePress = () => {
     if (!isOnline) {
-      toast.custom(<StatusMessage type='error' title={'You are oofline, Connect to service center.'}/>,{duration:1000})
-      // Alert.alert('No Internet', 'You need an internet connection to access this section.');
+      toast.custom(<StatusMessage type='error' title={'You are offline, Connect to service center.'}/>,{duration:1000})
       return;
     }
     onPress();
@@ -47,6 +46,28 @@ const CustomTabBarButton = ({ children, onPress, isOnline, style, ...props }) =>
 
 const TabNavigation = () => {
   const { IsOnline } = useAuth();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setIsKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setIsKeyboardVisible(false);
+      }
+    );
+
+    // Cleanup listeners on unmount
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   return (
     <Tab.Navigator
@@ -61,13 +82,14 @@ const TabNavigation = () => {
           paddingBottom: 5,
           paddingTop: 5,
           height: 70,
+          // Hide tab bar when keyboard is visible
+          display: isKeyboardVisible ? 'none' : 'flex',
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
         },
         tabBarItemStyle: {
-          // This ensures each tab item uses flexbox to center content
           justifyContent: 'center',
           alignItems: 'center',
         },
@@ -109,7 +131,7 @@ const TabNavigation = () => {
         }}
       />
 
-        <Tab.Screen
+      <Tab.Screen
         name="History"
         component={History}
         options={{
@@ -131,8 +153,6 @@ const TabNavigation = () => {
           headerTitle: 'History',
         }}
       />
-
-      
 
       <Tab.Screen
         name="Profile"

@@ -1,15 +1,17 @@
-import { Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList } from 'react-native'
+import { Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, ActivityIndicator, Platform } from 'react-native'
 import React, { useState } from 'react'
 import LinearGradient from 'react-native-linear-gradient';
 import { Colors } from '../../../constants/Color';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DownIcon, FileIcon, GrowIcon, WalletIcon } from '../../../assets/svgIcons/SVGIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Toast from 'react-native-toast-message';
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState('Expense');
   const [expenses, setExpenses] = useState([]);
   const [earnings, setEarnings] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Form states
   const [whatFor, setWhatFor] = useState('');
@@ -27,30 +29,54 @@ const Home = () => {
 
   const insets = useSafeAreaInsets()
 
-  const handleAdd = () => {
+  // Show toast using react-native-toast-message
+  const showToast = (message, type = 'success') => {
+    Toast.show({
+      type: type, // 'success', 'error', 'info'
+      text1: type === 'success' ? 'Success!' : 'Error!',
+      text2: message,
+      position: 'top',
+      visibilityTime: 3000,
+      autoHide: true,
+      topOffset: 50,
+    });
+  };
+
+  const handleAdd = async () => {
     if (!whatFor.trim() || !amount.trim()) {
-      alert('Please fill all fields');
+      showToast('Please fill all fields', 'error');
       return;
     }
 
-    const newItem = {
-      id: Date.now().toString(),
-      whatFor: whatFor,
-      amount: parseFloat(amount),
-      date: date.toLocaleDateString(),
-      fullDate: date
-    };
+    // Start loading
+    setIsLoading(true);
 
-    if (activeTab === 'Expense') {
-      setExpenses([newItem, ...expenses]);
-    } else {
-      setEarnings([newItem, ...earnings]);
-    }
+    // Simulate API call or processing with 2 second delay
+    setTimeout(() => {
+      const newItem = {
+        id: Date.now().toString(),
+        whatFor: whatFor,
+        amount: parseFloat(amount),
+        date: date.toLocaleDateString(),
+        fullDate: date
+      };
 
-    // Reset form
-    setWhatFor('');
-    setAmount('');
-    setDate(new Date());
+      if (activeTab === 'Expense') {
+        setExpenses([newItem, ...expenses]);
+        showToast(`Expense of ₹${amount} added successfully!`, 'success');
+      } else {
+        setEarnings([newItem, ...earnings]);
+        showToast(`Earning of ₹${amount} added successfully!`, 'success');
+      }
+
+      // Reset form
+      setWhatFor('');
+      setAmount('');
+      setDate(new Date());
+      
+      // Stop loading
+      setIsLoading(false);
+    }, 2000);
   };
 
   const onDateChange = (event, selectedDate) => {
@@ -93,8 +119,6 @@ const Home = () => {
           barStyle="dark-content"
           translucent={true}
         />
-
-
 
         <ScrollView
           className="flex-1"
@@ -170,10 +194,9 @@ const Home = () => {
 
                 </View>
                 <Text className='text-lg text-center font-bold text-gray-900'>
-                  ₹{expenses.reduce((sum, item) => sum + item.amount, 0)}
+                  ₹{earnings.reduce((sum, item) => sum + item.amount, 0)}
                 </Text>
               </View>
-
 
               {/* Card 3 - Balance */}
               <View className='bg-white px-5 py-5 rounded-2xl w-[31%] border border-gray-300' >
@@ -185,7 +208,7 @@ const Home = () => {
 
                 </View>
                 <Text className='text-lg text-center font-bold text-gray-900'>
-                  ₹{expenses.reduce((sum, item) => sum + item.amount, 0)}
+                  ₹{(earnings.reduce((sum, item) => sum + item.amount, 0) - expenses.reduce((sum, item) => sum + item.amount, 0))}
                 </Text>
               </View>
 
@@ -197,6 +220,7 @@ const Home = () => {
             <TouchableOpacity
               className={`py-2 px-4 mr-3 flex-1 justify-center items-center rounded-xl ${activeTab === 'Expense' ? 'bg-white' : ''}`}
               onPress={() => setActiveTab('Expense')}
+              disabled={isLoading}
             >
               <Text className={`text-sm font-medium ${activeTab === 'Expense' ? 'text-black' : 'text-stone-600'}`}>
                 Expense
@@ -205,6 +229,7 @@ const Home = () => {
             <TouchableOpacity
               className={`py-2 px-4 mr-3 flex-1 justify-center items-center rounded-xl ${activeTab === 'Earnings' ? 'bg-white' : ''}`}
               onPress={() => setActiveTab('Earnings')}
+              disabled={isLoading}
             >
               <Text className={`text-sm font-medium ${activeTab === 'Earnings' ? 'text-black' : 'text-stone-600'}`}>
                 Earnings
@@ -222,11 +247,12 @@ const Home = () => {
             <View className="mb-4">
               <Text className="text-gray-700 text-sm mb-2 font-medium">What for?</Text>
               <TextInput
-                className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800"
+                className={`border rounded-xl px-4 py-3 text-gray-800 ${isLoading ? 'bg-gray-100 border-gray-200' : 'border-gray-300'}`}
                 placeholder="e.g., Grocery, Shopping, Salary"
                 value={whatFor}
                 onChangeText={setWhatFor}
                 placeholderTextColor="#999"
+                editable={!isLoading}
               />
             </View>
 
@@ -234,12 +260,13 @@ const Home = () => {
             <View className="mb-4">
               <Text className="text-gray-700 text-sm mb-2 font-medium">Amount (₹)</Text>
               <TextInput
-                className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800"
+                className={`border rounded-xl px-4 py-3 text-gray-800 ${isLoading ? 'bg-gray-100 border-gray-200' : 'border-gray-300'}`}
                 placeholder="Enter amount"
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="numeric"
                 placeholderTextColor="#999"
+                editable={!isLoading}
               />
             </View>
 
@@ -247,10 +274,11 @@ const Home = () => {
             <View className="mb-4">
               <Text className="text-gray-700 text-sm mb-2 font-medium">Date</Text>
               <TouchableOpacity
-                className="border border-gray-300 rounded-xl px-4 py-3"
-                onPress={() => setShowDatePicker(true)}
+                className={`border rounded-xl px-4 py-3 ${isLoading ? 'bg-gray-100 border-gray-200' : 'border-gray-300'}`}
+                onPress={() => !isLoading && setShowDatePicker(true)}
+                disabled={isLoading}
               >
-                <Text className="text-gray-800">{formatDate(date)}</Text>
+                <Text className={`${isLoading ? 'text-gray-400' : 'text-gray-800'}`}>{formatDate(date)}</Text>
               </TouchableOpacity>
 
               {showDatePicker && (
@@ -263,14 +291,24 @@ const Home = () => {
               )}
             </View>
 
-            {/* Add Button */}
+            {/* Add Button with Loader */}
             <TouchableOpacity
-              className={`rounded-xl py-3 ${activeTab === 'Expense' ? 'bg-red-600' : 'bg-green-600'}`}
+              className={`rounded-xl py-3 ${activeTab === 'Expense' ? 'bg-red-600' : 'bg-green-600'} ${isLoading ? 'opacity-70' : ''}`}
               onPress={handleAdd}
+              disabled={isLoading}
             >
-              <Text className="text-white text-center font-bold text-base">
-                Add {activeTab === 'Expense' ? 'Expense' : 'Earning'}
-              </Text>
+              {isLoading ? (
+                <View className="flex-row items-center justify-center">
+                  <ActivityIndicator size="small" color="#ffffff" />
+                  <Text className="text-white text-center font-bold text-base ml-2">
+                    Adding...
+                  </Text>
+                </View>
+              ) : (
+                <Text className="text-white text-center font-bold text-base">
+                  Add {activeTab === 'Expense' ? 'Expense' : 'Earning'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -306,6 +344,9 @@ const Home = () => {
 
         </ScrollView>
       </LinearGradient>
+      
+      {/* Add Toast component at the end of your component */}
+      <Toast />
     </View>
   )
 }
