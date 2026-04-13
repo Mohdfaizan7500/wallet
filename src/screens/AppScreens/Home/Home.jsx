@@ -95,7 +95,7 @@ const Home = () => {
   };
 
   const renderItem = ({ item }) => (
-    <View className="bg-white rounded-xl p-4 mb-3 flex-row justify-between items-center" style={{ elevation: 2 }}>
+    <View className="bg-white rounded-xl p-4 mb-3 flex-row justify-between items-center border border-gray-200" >
       <View className="flex-1">
         <Text className="font-semibold text-gray-800 text-base">{item.whatFor}</Text>
         <Text className="text-gray-500 text-xs mt-1">{item.date}</Text>
